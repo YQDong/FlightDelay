@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<head>
+    <meta charset="utf-8">
+    <title>Something something airports</title>
+    <link rel="stylesheet" type="text/css" href="css/MapStyle.css"/>
+	<link rel="stylesheet" type="text/css" href="css/d3.slider.css"/>
+</head>
+
+<body>
+    <h3>30 U.S. Large Hub Airports in 2013</h3>
+    <!-- need a blank div for d3 to 
+    select and insert content into -->
+<div style="margin:50;">
+
+	<label for="Rate/Time" style = "left:100px;top:10px; position:relative;">Arrival / Departure </label>
+
+	<select id="delayType" style="display: table-cell; width: 90px; left:100px;top:5px;font-size: 16px; position:relative;">    
+	<option val="DelayArr">Arrival</option>
+	<option val="DelayDep">Departure</option>
+	</select> 
+  
+  <label for="Rate/Time" style = "  left:200px; position:relative;">Occurrence / Strength  </label>
+  <select id="visType" style="display: table-cell; width: 125px; top: -5px; left:200px; font-size: 16px; position:relative;">
+      
+    <option val="DelayRate">Occurrence</option>
+    <option val="DelayTime">Strength Median</option>
+  </select>
+    <div style="display: table-cell; width: 150; left:220px; position:relative;">
+    <button id="update"  style="left:50px; position:relative;" onclick="updateClicked()">SHOW</button>
+  </div>
+   <div id = "year" class = "dropdownMenu" style="display: table-cell; left: 90px; width: 150px; top: 20px; position:relative;">
+    <label for="year" class="dropdownLabel">Year: </label>
+  </div>
+  
+    <div id = "month" class = "dropdownMenu" style="display: table-cell;left: 60px; width: 100px; top: 20px; position:relative;">
+    <label for="month" class="dropdownLabel">Month: </label>
+  </div>
+</div>   	
+
+<div id="sliderDay">
+  <label>Show flows for </label><label id="day" name="day">1:</label>
+
+</div>	
+
+
+ <div id="airportcanvas" ></div>
+
+    <!-- a slider for enplanement selection -->
+    <div class="slider" style="top:750px;">
+        Passenger Enplanements of at least: 
+        <span id="sliderlabel" style="color:#268bd2"></span>
+        <input id="enplanements" 
+               style="position:relative;top:3px;" 
+               type="range" min="7000000" max="44000000" 
+               step="1000" value="7000000">
+    </div>
+	
+    <!-- a button for enplanement sizing -->
+    <button id="enplanementButton"  style="top:750px;"
+        onclick="toggleEnplanementAirportSize()">
+        Size By Enplanements
+    </button>
+
+    <!-- dependencies; link to URL's of these, 
+         or download and place in folder -->
+    <script src="d3/d3.v3.min.js"></script>
+    <script src="d3/d3.tip.js"></script>
+    <script src="d3/queue.min.js"></script>
+    <script src="d3/topojson.v1.min.js"></script>
+	<script src="d3/d3.slider.js"></script>
+	<script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.0/jquery.js"></script>
+	
+ <script>
+ var sliderDayContent = d3.slider().min(1).max(31).ticks(31).showRange(true).value(1);
+
+	d3.select("#sliderDay").call(sliderDayContent)
+	var csvOriginal = [];
+ var delayData_0 = [];
+    d3.csv("data/2011-2013_Median_Summary_Rounded.csv", function(error, csv) {
+	
+		   csvOriginal = csv;      
+
+		 delayData_0  = d3.nest().key(function(d) { return d.AIRPORT;}).key(function(d) { return d.YEAR;}).key(function(d) { return d.MONTH;}).entries(csvOriginal);
+		        var selectYear = d3.select("#year").append("select").attr("id", "yearValue").on("change",updateDay);
+        selectYear.selectAll("option").data(delayData_0[0].values).enter().append("option")
+    .attr("value", function(d) { return d.key; })
+    .text(function(d) { return d.key; }); 	
+       
+	var selectMonth = d3.select("#month").append("select").attr("id", "monthValue").on("change",updateDay);
+
+	selectMonth.selectAll("option").data(delayData_0[0].values[0].values).enter().append("option")
+	  .attr("value", function(d) { return d.key; })
+	  .text(function(d) { return d.key; });	 
+	   
+ 		
+		
+		maxDelayStrength_M = Math.max(d3.max(csvOriginal, function(d) { return +d.DEP_DELAY_STRENGTH_M}),d3.max(csvOriginal, function(d) { return +d.ARR_DELAY_STRENGTH_M}));
+	    maxDelayOccurrence = Math.max(d3.max(csvOriginal, function(d) { return +d.DEP_DELAY_OCCURRENCE}),d3.max(csvOriginal, function(d) { return +d.ARR_DELAY_OCCURRENCE}));	
+	});
+    
+	var monthNumber;
+	var yearNumber;
+	var dayNumber;
+	
+	function updateDay(){
+	
+	yearNumber = getYear();
+    monthNumber = getMonth()
+	
+	var dayNumber = d3.max(delayData_0[0].values[+yearNumber - 2011].values[+monthNumber - 1].values, function(d) { return +d.DAY_OF_MONTH})
+	d3.select("#sliderDay").call(sliderDayContent);
+	//d3.select("#sliderDay").attr("max",dayNumber);
+
+	
+	};
+	
+	d3.select("#sliderDay").on("change", function() {
+	      
+		  d = parseInt(+this.value);
+
+
+
+		  d3.select("#day").text("" + d);
+
+		  });
+		  
+		  
+
+function getYear(){
+  var node = document.getElementById("yearValue")
+  return node.options[node.selectedIndex].value
+};
+
+function getMonth(){
+  var node = document.getElementById("monthValue")
+  return node.options[node.selectedIndex].value
+};		  
+		  
+</script>
+
+    <!-- OUR SCRIPT -->
+    <script src="d3/plot-airports.js"></script>
+</body>

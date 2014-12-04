@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+
+svg {
+  font: 10px sans-serif;
+}
+
+.area {
+  fill: steelblue;
+  clip-path: url(#clip);
+}
+
+.axis path,
+.axis line {
+  fill: none;
+  stroke: #000;
+  shape-rendering: crispEdges;
+}
+
+.brush .extent {
+  stroke: #fff;
+  fill-opacity: .125;
+  shape-rendering: crispEdges;
+}
+.delay text {
+  text-anchor: end;
+}
+
+</style>
+
+<div style="margin:50;">
+
+  <div id = "airportCode" style="display: table-cell; width: 150;left:157px; position:relative;">
+    <label for="airportCode">Airport Code</label>
+  </div>
+  
+  
+  <div style="display: table-cell; width: 150; left:220px; position:relative;">
+    <button id="update"  style="left:50px; position:relative;" onclick="updateClicked()">SHOW</button>
+	<label for="lineChart" style="top:0px; left: 100px;position:relative;">Upper: Departure; Lower: Arrival</label>
+  </div>
+	
+</div>   
+
+<div id = "lineChart" style="top:50px; position:relative;"> </div>
+
+<body>
+
+<script src="http://d3js.org/d3.v3.min.js"></script>
+
+<script>
+
+   var csvOriginal = [];
+   
+    d3.csv("data/2011-2013_Median_Summary_Rounded.csv", function(error, csv) {
+        csvOriginal = csv;        		
+		var delayData_0 = d3.nest().key(function(d) { return d.AIRPORT;}).sortKeys(d3.ascending).entries(csv);
+		var selectAirport = d3.select("#airportCode").append("select").attr("id", "airport-list");
+		selectAirport.selectAll("option").data(delayData_0).enter().append("option")	.attr("value", function(d) { return d.key; }).text(function(d) { return d.key; });
+	});
+	
+	var margin = {top: 10, right: 10, bottom: 400, left: 40},
+		  margin2 = {top: 170, right: 10, bottom: 330, left: 40},
+          width = 1260 - margin.left - margin.right,
+          height = 120,
+          height2 = 20;
+
+	var svg = d3.select("body").append("svg").attr("width", width + margin.left + margin.right).attr("height", height + margin.top + margin.bottom);
+	svg.append("defs").append("clipPath").attr("id", "clip").append("rect").attr("width", width).attr("height", height);
+	
+	var focus = svg.append("g").attr("class", "focus").attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+	var context = svg.append("g").attr("class", "context").attr("transform", "translate(" + margin2.left + "," + margin2.top + ")");
+	  
+	var focus2 = svg.append("g").attr("class", "focus2").attr("transform", "translate(" + margin.left + "," + (225+margin.top) + ")");
+	var context2 = svg.append("g").attr("class", "context2").attr("transform", "translate(" + margin2.left + "," + (220+margin2.top) + ")");
+
+	var currentView = [];
+
+	function updateClicked(){ 
+		if (currentView == getAirport() ){			
+		}else{
+			currentView = getAirport();
+			d3.select(".focus").remove();
+			d3.select(".context").remove();
+			d3.select(".focus2").remove();
+			d3.select(".context2").remove();
+			var delayData_1 = [];
+			delayData_1= csvOriginal.filter(function(row) {return row['AIRPORT']== currentView;});
+			depPart(delayData_1);
+			arrPart(delayData_1)
+		};
+	};
+
+	function depPart(data) {
+
+		var x = d3.time.scale().range([0, width]),
+			x2 = d3.time.scale().range([0, width]),
+			y = d3.scale.linear().range([height, 0]),
+			y2 = d3.scale.linear().range([height2, 0]);	
+			
+		var xAxis = d3.svg.axis().scale(x).orient("bottom"),
+			xAxis2 = d3.svg.axis().scale(x2).orient("bottom"),
+			yAxis = d3.svg.axis().scale(y).orient("left");
+		var area = d3.svg.area().interpolate("basis").x(function(d) { return x(d.DATE); }).y0(function(d) { return y(d.y0);}).y1(function(d) { return y(d.y0 + d.y); });
+
+		var area2 = d3.svg.area().interpolate("basis").x(function(d) { return x2(d.DATE); }).y0(function(d) { return y2(d.y0);}).y1(function(d) { return y2(d.y0 + d.y); });
+
+		var stack = d3.layout.stack().values(function(d) { return d.values; });
+
+		var color = d3.scale.category10();
+		var parseDate = d3.time.format("%m/%e/%Y").parse;	
+		var brush = d3.svg.brush().x(x2).on("brush", brushed);	
+		var focus = svg.append("g").attr("class", "focus").attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+		var context = svg.append("g").attr("class", "context").attr("transform", "translate(" + margin2.left + "," + margin2.top + ")");
+	
+		color.domain(d3.keys(data[0]).filter(function(key) { return key == "DEP_DELAY_OCCURRENCE" || key == "DEP_CANCEL_OCCURRENCE"; }));
+
+		data.forEach(function(d) {d.DATE = parseDate(d.DATE);});
+
+		var alldelays = stack(color.domain().map(function(name) {
+			return {
+				name: name,
+				values: data.map(function(d) {
+					return {DATE: d.DATE, y: +d[name] };
+			  })
+			};
+		}));
+
+		x.domain(d3.extent(data.map(function(d) { return d.DATE; })));
+		x2.domain(x.domain());
+
+	//add text for delay and cancel
+	/*
+		var delay = svg.selectAll(".delay").data(alldelays).enter().append("g").attr("class", "delay");
+
+		delay.append("text")
+			.datum(function(d) { return {name: d.name, value: d.values[d.values.length - 1]}; })
+			.attr("transform", function(d) { return "translate(" + x(d.value.DATE) + "," + y(d.value.y0 + d.value.y / 50) + ")"; })
+			.text(function(d) { return d.name; });
+	*/
+
+	//define focus and context
+		focus.selectAll('path.focus')
+			.data(alldelays)
+			.enter()
+			.append('path')
+			.attr('clip-path','url(#clip)')
+			.attr('class','focus')
+			.attr("d", function(d) { return area(d.values); })
+			.style("fill", function(d) { return color(d.name); });
+
+		focus.append("g").attr("class", "x axis").attr("transform", "translate(0," + height + ")").call(xAxis);
+
+		focus.append("g").attr("class", "y axis").call(yAxis);
+
+		context.selectAll('path.context')
+			.data(alldelays)
+			.enter()
+			.append('path')
+			.attr('class','context')
+			.attr("d", function(d) { return area2(d.values); })
+			.style("fill", function(d) { return color(d.name); });
+
+		context.append("g")
+		  .attr("class", "x axis")
+		  .attr("transform", "translate(0," + height2 + ")")
+		  .call(xAxis2);
+
+		context.append("g")
+			.attr("class", "x brush")
+			.call(brush)
+			.selectAll("rect")
+			.attr("y", -6)
+			.attr("height", height2 + 7);
+			
+		function brushed() {
+			x.domain(brush.empty() ? x2.domain() : brush.extent());
+			focus.selectAll("path.focus").attr("d", function(d){return area(d.values)});
+			focus.select(".x.axis").call(xAxis);
+		};	
+	};
+	
+	function arrPart(data) {
+
+		var x = d3.time.scale().range([0, width]),
+			x2 = d3.time.scale().range([0, width]),
+			y = d3.scale.linear().range([height, 0]),
+			y2 = d3.scale.linear().range([height2, 0]);	
+			
+		var xAxis = d3.svg.axis().scale(x).orient("bottom"),
+			xAxis2 = d3.svg.axis().scale(x2).orient("bottom"),
+			yAxis = d3.svg.axis().scale(y).orient("left");
+		var area = d3.svg.area().interpolate("basis").x(function(d) { return x(d.DATE); }).y0(function(d) { return y(d.y0);}).y1(function(d) { return y(d.y0 + d.y); });
+
+		var area2 = d3.svg.area().interpolate("basis").x(function(d) { return x2(d.DATE); }).y0(function(d) { return y2(d.y0);}).y1(function(d) { return y2(d.y0 + d.y); });
+
+		var stack = d3.layout.stack().values(function(d) { return d.values; });
+
+		var color_2 = d3.scale.category10();  
+		var parseDate_2 = d3.time.format("%m/%e/%Y").parse;
+		var brush2 = d3.svg.brush().x(x2).on("brush", brushed2);
+		var focus2 = svg.append("g").attr("class", "focus2").attr("transform", "translate(" + margin.left + "," + (225+margin.top) + ")");
+		var context2 = svg.append("g").attr("class", "context2").attr("transform", "translate(" + margin2.left + "," + (220+margin2.top) + ")");
+
+		color_2.domain(d3.keys(data[0]).filter(function(key) { return key == "ARR_DELAY_OCCURRENCE" || key == "ARR_CANCEL_OCCURRENCE"; }));
+
+		//data.forEach(function(d) {d.DATE = parseDate_2(d.DATE);});
+
+		var alldelays = stack(color_2.domain().map(function(name) {
+			return {
+				name: name,
+				values: data.map(function(d) {
+					return {DATE: d.DATE, y: +d[name] };
+				})
+			};
+		}));
+
+		x.domain(d3.extent(data.map(function(d) { return d.DATE; })));
+		x2.domain(x.domain());
+
+	/*
+		var delay = svg.selectAll(".delay").data(alldelays).enter().append("g").attr("class", "delay");
+
+		delay.append("text")
+			.datum(function(d) { return {name: d.name, value: d.values[d.values.length - 1]}; })
+			.attr("transform", function(d) { return "translate(" + x(d.value.DATE) + "," + y(d.value.y0 + d.value.y / 50) + ")"; })
+			.text(function(d) { return d.name; });
+	*/
+
+		//define focus and context for arrival       
+		focus2.selectAll('path.focus')
+			.data(alldelays)
+			.enter()
+			.append('path')
+			.attr('clip-path','url(#clip)')
+			.attr('class','focus')
+			.attr("d", function(d) { return area(d.values); })
+			.style("fill", function(d) { return color_2(d.name); });
+
+		focus2.append("g")
+			.attr("class", "x axis")
+			.attr("transform", "translate(0," + height + ")")
+			.call(xAxis);
+
+		focus2.append("g")
+			.attr("class", "y axis")
+			.call(yAxis);
+
+		context2.selectAll('path.context')
+			.data(alldelays)
+			.enter()
+			.append('path')
+			.attr('class','context')
+			.attr("d", function(d) { return area2(d.values); })
+			.style("fill", function(d) { return color_2(d.name); });
+
+		context2.append("g")
+			.attr("class", "x axis")
+			.attr("transform", "translate(0," + height2 + ")")
+			.call(xAxis2);
+
+		context2.append("g")
+			.attr("class", "x brush")
+			.call(brush2)
+			.selectAll("rect")
+			.attr("y", -6)
+			.attr("height", height2 + 7);	  
+	  
+		function brushed2() {
+			x.domain(brush2.empty() ? x2.domain() : brush2.extent());
+			focus2.selectAll("path.focus").attr("d", function(d){return area(d.values)});
+			focus2.select(".x.axis").call(xAxis);
+		}
+	};
+
+	function getAirport(){
+		var node = document.getElementById("airport-list")
+		return node.options[node.selectedIndex].value
+	};
+	
+</script>

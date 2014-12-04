@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<head>
+    <meta charset="utf-8">
+	<title>Delay Heatmap</title>
+     <link rel="stylesheet" type="text/css" href="css/HeatmapStyle.css"/>
+</head>
+
+<div style="margin:50;">
+
+  <div id = "airportCode" style="display: table-cell; width: 150;left:157px; position:relative;">
+    <label for="airportCode">Airport Code</label>
+  </div>
+  
+  
+  <div style="display: table-cell; width: 150; left:220px; position:relative;">
+    <button id="update"  style="left:50px; position:relative;" onclick="updateClicked()">SHOW</button>
+  </div>
+
+  <label for="Rate/Time" style = "left:120px;top:10px; position:relative;">Arrival / Departure </label>
+  
+  <select id="delayType" style="display: table-cell; width: 90px; left:120px;top:10px; position:relative;">    
+    <option val="DelayArr">Arrival</option>
+    <option val="DelayDep">Departure</option>
+	</select> 
+  
+  <label for="Rate/Time" style = " top: 40px; left:-125px; position:relative;">Occurrence / Strength  </label>
+  <select id="visType" style="display: table-cell; width: 125px; top:40px; left:-125px; position:relative;">
+      
+    <option val="DelayRate">Occurrence</option>
+    <option val="DelayTime">Strength Median</option>
+  </select>
+ 
+</div>   
+
+<div id = "heatMap" style="top:50px; position:relative;"> </div>
+
+<script src="d3/d3.v3.min.js"></script>
+<script src="d3/colorPalettes.js"></script>
+<script>
+    
+	var n = 100;
+    var trycol = colorChildrenDisc("#e6550d",-6,8,n);
+	var a = [];
+	for(i=0;i<n;i++){a[i] = ".RdYlGn .q" + i + "-" + n + "{fill:"+trycol[i]+"}"};
+	var b = [];
+	for(i=0;i<n;i++){b = b + a[i] +"\n"};
+//	console.log(b);
+
+	var csvOriginal = [];
+	var  maxDelayStrength_M = [];
+	var  maxDelayOccurrence = [];
+	
+	var month_start = 0,
+		month_end = 0,
+		year_next = 1;
+
+	var width = 960,
+		height = 136,
+		cellSize = 17; 
+
+	var day = d3.time.format("%w"),
+		week = d3.time.format("%U"),
+		percent = d3.format(".1%"),
+		format = d3.time.format("%Y-%m-%d");
+
+	var svg = d3.select("#heatMap").selectAll("svg")
+		.data(d3.range(2011, 2014))
+		.enter().append("svg")
+		.attr("width", width)
+		.attr("height", height)
+		.attr("class", "RdYlGn")
+		.append("g")
+		.attr("transform", "translate(" + ((width - cellSize * 53) / 2) + "," + (height - cellSize * 7 - 1) + ")");
+	
+	svg.append("text")
+		.attr("transform", "translate(-6," + cellSize * 3.5 + ")rotate(-90)")
+		.style("text-anchor", "middle")
+		.text(function(d) { return d; });
+
+	var rect = svg.selectAll(".day")
+		.data(function(d) { 
+		  return d3.time.days(new Date(d, month_start, 1), new Date(d + year_next,month_end , 1));
+		})
+		.enter().append("rect")
+		.attr("class", "day")
+		.attr("width", cellSize)
+		.attr("height", cellSize)
+		.attr("x", function(d) { return week(d) * cellSize; })
+		.attr("y", function(d) { return day(d) * cellSize; })
+		.datum(format);
+
+	rect.append("title")
+		.text(function(d) { return d; });
+
+	svg.selectAll(".month")
+		.data(function(d) { 
+		  return d3.time.months(new Date(d, month_start, 1), new Date(d + year_next,month_end , 1));
+		})
+		.enter().append("path")
+		.attr("class", "month")
+		.attr("d", monthPath);
+
+    d3.csv("data/2011-2013_Median_Summary_Rounded.csv", function(error, csv) {
+	
+        csvOriginal = csv;
+		var delayData_0 = [];
+        		
+		delayData_0 = d3.nest().key(function(d) { return d.AIRPORT;}).sortKeys(d3.ascending).entries(csv);
+
+		var selectAirport = d3.select("#airportCode").append("select").attr("id", "airport-list");
+
+		selectAirport.selectAll("option").data(delayData_0).enter().append("option")
+			.attr("value", function(d) { return d.key; })
+			.text(function(d) { return d.key; });
+		
+		maxDelayStrength_M = Math.max(d3.max(csvOriginal, function(d) { return +d.DEP_DELAY_STRENGTH_M}),d3.max(csvOriginal, function(d) { return +d.ARR_DELAY_STRENGTH_M}));
+	    maxDelayOccurrence = Math.max(d3.max(csvOriginal, function(d) { return +d.DEP_DELAY_OCCURRENCE}),d3.max(csvOriginal, function(d) { return +d.ARR_DELAY_OCCURRENCE}));	
+	});
+	
+	
+	function updateClicked(){
+
+		var chooseCol= [];
+		var lowbound = [];
+			upbound = [];    
+		var perMark = false;
+		
+		if(getVisTypeSelected() == "Strength Median") {
+		chooseCol="DELAY_STRENGTH_M";
+		lowbound = 15.; 
+		upbound = 100;
+		perMark = false; 
+	  } else { 
+		chooseCol="DELAY_OCCURRENCE";
+		lowbound = .0;
+		upbound = maxDelayOccurrence; 
+		perMark = true;
+	  };
+	  
+	   if(getDelayTypeSelected() == "Arrival") {
+		chooseCol= "ARR_"+chooseCol;
+	  } else { 
+		chooseCol= "DEP_"+chooseCol;
+	  };
+        	
+		var color = d3.scale.quantize()
+			.domain([lowbound, upbound])
+			.range(d3.range(n).map(function(d) { return "q" + d + "-" + n; }));
+			   
+		var csv = csvOriginal.filter(function(row) {
+			return row['AIRPORT']== getAirport();
+		});
+			
+		 data = d3.nest()
+		  .key(function(d) { 
+			return d3.time.format('%Y-%m-%d')(d3.time.format('%m/%d/%Y').parse(d.DATE));
+		  })
+		  .rollup(function(d) { 
+		    if (d[0][chooseCol] == "#NUM!" || d[0][chooseCol] == 0) { d[0][chooseCol] = Number.POSITIVE_INFINITY};
+			return d[0][chooseCol];
+		  })
+		  .map(csv);
+		console.log(data);
+		rect.filter(function(d) { return d in data; })
+			.attr("class", function(d) { return "day " + color(data[d]); })
+		    .select("title")
+			.text(function(d) { 
+				  if(perMark==true) {
+					return d + ": " + percent(data[d]);
+				} else {
+				  return d + ": " + data[d]+" mins";
+				} 
+			});
+	};
+
+	function monthPath(t0) {
+
+	  var t1 = new Date(t0.getFullYear(), t0.getMonth() + 1, 0),
+		  d0 = +day(t0), w0 = +week(t0),
+		  d1 = +day(t1), w1 = +week(t1);
+
+	  return "M" + (w0 + 1) * cellSize + "," + d0 * cellSize
+		  + "H" + w0 * cellSize + "V" + 7 * cellSize
+		  + "H" + w1 * cellSize + "V" + (d1 + 1) * cellSize
+		  + "H" + (w1 + 1) * cellSize + "V" + 0
+		  + "H" + (w0 + 1) * cellSize + "Z";
+	};
+
+	function getAirport(){
+		var node = document.getElementById("airport-list")
+		return node.options[node.selectedIndex].value
+	};
+	
+	function getDelayTypeSelected(){
+	
+		var node = document.getElementById("delayType")
+		return node.options[node.selectedIndex].value
+
+	};
+	
+	function getVisTypeSelected(){
+	
+		var node = document.getElementById("visType")
+		return node.options[node.selectedIndex].value
+
+	};
+
+d3.select(self.frameElement).style("height", "2910px");
+
+
+</script>

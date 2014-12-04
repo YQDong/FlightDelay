@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<head>
+    <meta charset="utf-8">
+    <title>Airports Delay Situations</title>
+    <link rel="stylesheet" type="text/css" href="css/MapStyle.css"/>
+</head>
+<style>
+	.axis path,
+	.axis line {
+
+	  fill: none;
+	  stroke: #000;
+	  shape-rendering: crispEdges;
+	}
+
+	.tick {
+	font-size: 10px;
+	}
+</style>
+
+<body>
+    <h3>30 U.S. Large Hub Airports in 2013</h3>
+	<div style="margin:50;">
+		<label for="Rate/Time" style = "left:200px; top: 100px;position:absolute;">Arrival / Departure: </label>
+		<select id="delayType" style="display: table-cell; width: 150px; left:410px;font-size: 20px; position:absolute;" onchange = "updateDelay()">    
+		<option val="DelayArr">Arrival</option>
+		<option val="DelayDep">Departure</option></select> 
+	  
+		<label for="Rate/Time" style = "left:600px; top: 100px; position:absolute;">Occurrence / Strength:  </label>
+		<select id="visType" style="display: table-cell; width: 200px; left:850px;font-size: 20px; position:absolute;" onchange = "updateDelay()">      
+		<option val="DelayRate">Occurrence</option>
+		<option val="DelayTime">Strength Median</option></select>
+			
+		<label for="year" style = "left:200px; top:170px; position:absolute;" class="dropdownLabel">Year: </label>
+		<select id = "year" style="display: table-cell; top:170px; left: 265px; width: 90px;  font-size: 20px; position:absolute;" onchange = "updateDay()"></select>
+	  
+		<label for="month" style = "left:370px; top:170px; position:absolute;" class="dropdownLabel">Month: </label>
+		<select id = "month" style="display: table-cell; left: 450px; top:170px; width: 80px;  font-size: 20px; position:absolute;" onchange = "updateDay()"></select>
+	</div> 	
+
+	<div id="sliderDayArea" style= "left:600px; top:170px; position:absolute;">
+		<label style = "left:0px; top:0px; position:absolute;">Date:</label>
+		<label id="day" name="day" style = "left:60px; top:0px; position:absolute;">1</label>
+		<input id="sliderDay" style = "left:90px; top:0px;width:1000px;position:absolute;" type="range" min="1" max="31" value="1" step="1" ticks = "true" />
+	</div>	
+ 
+	<div class="slider" style = "left:1100px; top:100px; position:absolute;">
+        Passenger Enplanements of at least: 
+        <span id="sliderlabel" style="color:#268bd2"></span>
+        <input id="enplanements" 
+               style = "left:510px; top:0px; position:absolute;"
+               type="range" min="7000000" max="44000000" 
+               step="1000" value="7000000">
+	</div>
+	
+    <!-- a button for enplanement sizing -->
+    <button id="enplanementButton"  style = "left:200px; top:250px; position:absolute;"
+        onclick="toggleEnplanementAirportSize()">
+        Size By Delay
+    </button>
+ <div id="airportcanvas" ></div>
+    <!-- dependencies; link to URL's of these, 
+         or download and place in folder -->
+    <script src="d3/d3.v3.min.js"></script>
+    <script src="d3/d3.tip.js"></script>
+    <script src="d3/queue.min.js"></script>
+    <script src="d3/topojson.v1.min.js"></script>
+
+ <script>
+    
+	var monthNumber;
+	var yearNumber;
+	var dayTotalNumber;
+	var dayNumber;
+	var csvOriginal = [];
+	var delayData_0 = [];
+	var delayData_1 = [];	
+	var delayData_2 = [];
+    var minRadius = 2.5;
+	var perMark = [];
+	var maxRadius = [];
+	var rate = [];
+	var circlesDynamicallySized = false;
+	var enplanementFilterVal = 7000000;
+	var leftside = 95; 
+	var topside = 22;	
+	var axisSVG =  d3.select("#sliderDayArea").append("svg").attr("width",1200).append("g");
+
+	dayTotalNumber = 31;
+	drawAxis(dayTotalNumber);
+	
+	function drawAxis(dayTotalNUmber) {	
+		var x = d3.scale.linear().range([0,995]);		
+		var xAxis = d3.svg.axis().scale(x).orient("bottom").ticks(dayTotalNUmber-1);		
+		x.domain([1, dayTotalNUmber]);		
+		axisSVG.append("g").attr("class", "x axis").attr("transform", "translate(" + leftside + "," + topside + ")").call(xAxis);	 
+	};
+	
+	d3.csv("data/airport-data.csv", function(error, csv) {	
+		airports = csv;		
+	});
+	
+	d3.csv("data/2011-2013_Median_Summary_Rounded.csv", function(error, csv) {	
+		csvOriginal = csv;      
+		delayData_0  = d3.nest().key(function(d) { return d.AIRPORT;}).key(function(d) { return d.YEAR;}).key(function(d) { return d.MONTH;}).entries(csvOriginal);
+
+		var selectYear = d3.select("#year").selectAll("option").data(delayData_0[0].values).enter().append("option").attr("value", function(d) { return d.key; })
+		.text(function(d) { return d.key; }); 	
+
+		var selectMonth = d3.select("#month").selectAll("option").data(delayData_0[0].values[0].values).enter().append("option").attr("value", function(d) { return d.key; })
+		.text(function(d) { return d.key; }); 
+
+		delayData_1 = d3.nest().key(function(d){ return d.YEAR;}).key(function(d) { return d.MONTH;}).key(function(d) { return d.DAY_OF_MONTH}).entries(csvOriginal);
+		maxDelayStrength_M = Math.max(d3.max(csvOriginal, function(d) { return +d.DEP_DELAY_STRENGTH_M}),d3.max(csvOriginal, function(d) { return +d.ARR_DELAY_STRENGTH_M}));
+		maxDelayOccurrence = Math.max(d3.max(csvOriginal, function(d) { return +d.DEP_DELAY_OCCURRENCE}),d3.max(csvOriginal, function(d) { return +d.ARR_DELAY_OCCURRENCE}));	
+		delayData_2 = delayData_1[0].values[0].values[0].values;
+		
+		for(i=0;i<30;i++){
+			if(delayData_2[i]["ARR_DELAY_OCCURRENCE"] == 0){
+				airports[i]["delayRadius"] = 60
+				airports[i]["maxRadius"] = 60
+				airports[i]["allCanl"] = true
+				
+			}else{
+				airports[i]["delayRadius"] = delayData_2[i]["ARR_DELAY_OCCURRENCE"]*60
+				airports[i]["maxRadius"] = 60
+				airports[i]["allCanl"] = false
+			}
+		};
+	});
+    	
+	function updateDay(){
+		axisSVG.select(".x,axis").remove();
+		
+		yearNumber = getYear();
+		monthNumber = getMonth()
+		
+		dayTotalNumber = d3.max(delayData_0[0].values[+yearNumber - 2011].values[+monthNumber - 1].values, function(d) { return +d.DAY_OF_MONTH})
+		
+		d3.select("#sliderDay").property("value", 1);
+		d3.select("#sliderDay").attr("max",dayTotalNumber);
+		d3.select("#day").text("1:");
+		
+		drawAxis(dayTotalNumber);
+		updateDelay();
+	};
+	
+	d3.select("#sliderDay").on("input", function() {	      
+		dayNumber = parseInt(+this.value);
+		d3.select("#day").text("" + dayNumber );
+		updateDelay();
+	});
+		  
+	function getYear(){
+		var node = document.getElementById("year")
+		return node.options[node.selectedIndex].value
+	};
+
+	function getMonth(){
+		var node = document.getElementById("month")
+		return node.options[node.selectedIndex].value
+	};		  
+
+	function getDelayType(){
+		var node = document.getElementById("delayType")
+		return node.options[node.selectedIndex].value
+	};	
+
+	function getVisType(){
+		var node = document.getElementById("visType")
+		return node.options[node.selectedIndex].value
+	};	
+	
+	function updateDelay(){
+		yearNumber = getYear();
+		monthNumber = getMonth();
+		delayT = getDelayType();
+		visT = getVisType();
+		d3.select("#sliderDay").each(function(){dayNumber = parseInt(+this.value)})
+		delayData_2 = delayData_1[yearNumber-2011].values[monthNumber-1].values[dayNumber-1].values;
+
+		if(getVisType() == "Strength Median") {
+			chooseCol="DELAY_STRENGTH_M";
+			perMark = false; 
+		} else { 
+			chooseCol="DELAY_OCCURRENCE";
+			perMark = true;
+		};
+
+		if(getDelayType() == "Arrival") {
+			chooseCol= "ARR_"+chooseCol;
+		} else { 
+			chooseCol= "DEP_"+chooseCol;
+		};	
+
+		for(i=0;i<30;i++){
+			if (perMark){
+				if(delayData_2[i][chooseCol] == 0){
+					airports[i]["delayRadius"] = 60
+					airports[i]["maxRadius"] = 60
+					airports[i]["allCanl"] = true
+				}else{
+					
+					airports[i]["delayRadius"] = delayData_2[i][chooseCol]*60
+					airports[i]["maxRadius"] = 60
+					airports[i]["allCanl"] = false
+				}
+			}else{
+				if(delayData_2[i][chooseCol] == "#NUM!"){
+					airports[i]["delayRadius"] = minRadius
+					airports[i]["maxRadius"] = minRadius
+					airports[i]["allCanl"] = true
+				}else{
+					airports[i]["delayRadius"] = delayData_2[i][chooseCol]*60/90
+					airports[i]["maxRadius"] = 60
+					airports[i]["allCanl"] = false
+				}
+			}
+		};
+		
+		updateAirportRadius(enplanementFilterVal, circlesDynamicallySized)
+	};
+
+	function toggleEnplanementAirportSize() {
+		circlesDynamicallySized = !circlesDynamicallySized;
+		updateAirportRadius(enplanementFilterVal, circlesDynamicallySized);  
+	};
+
+	d3.select("#enplanements").on("input", function() {
+		updateEnplanementFilter(+this.value);
+	});
+
+	function capWords(sentence) {
+		return sentence.replace(/[^\w](\w)/g,function(w){return w.toUpperCase();});
+	};
+
+	function updateEnplanementFilter(newEnplaneVal) { 
+		// update the text slider
+		d3.select("#sliderlabel").text(newEnplaneVal.toLocaleString());  
+
+		// update the global var and the slider value
+		enplanementFilterVal = newEnplaneVal;
+		d3.select("#enplanements").property("value", newEnplaneVal);
+
+		// update all the circles
+		updateAirportRadius(enplanementFilterVal, circlesDynamicallySized);
+	};
+
+	function updateAirportRadius(enplanementFilter, circlesSized) {
+
+		var enplanementRadius1 = 0;
+		var enplanementRadius2 = 0;
+		
+		d3.selectAll(".airport1")
+			.select("rect")
+			.transition(400)
+			.attr("x",-8)
+			.attr("y", function(d){ 
+				if (circlesSized) {
+					enplanementRadius1 = d.maxRadius;
+				} else {
+					enplanementRadius1 = minRadius;
+				}					
+				if (d.enplanements >= enplanementFilter) {
+					return -1* Math.max(enplanementRadius1, minRadius); 
+				} else {
+					return 0;
+				}
+			})
+			.attr("width", 16)		
+			.attr("height", function(d){ 
+				if (circlesSized) {
+					enplanementRadius1 = d.maxRadius;
+				} else {
+					enplanementRadius1 = minRadius;
+				}            
+				if (d.enplanements >= enplanementFilter) {
+					return  Math.max(enplanementRadius1, minRadius); 
+				} else {
+					return 0;
+				}
+			}); 			  
+
+		d3.selectAll(".airport2")
+			.select("rect")
+			.transition(400)
+			.attr("x",-8)
+			.attr("y", function(d){ 
+					if (circlesSized) {
+						enplanementRadius2 = d.delayRadius;
+					} else {
+						enplanementRadius2 = minRadius;
+					}
+					
+					if (d.enplanements >= enplanementFilter) {
+						return -1* Math.max(enplanementRadius2, minRadius); 
+					} else {
+						return 0;
+					}
+				})
+			.attr("width", 16)		
+			.attr("height", function(d){ 
+				// should use () ? : syntax here, but line width for blog!
+				if (circlesSized) {
+					enplanementRadius2 = d.delayRadius;
+				} else {
+					enplanementRadius2 = minRadius;
+				}            
+				if (d.enplanements >= enplanementFilter) {
+					return  Math.max(enplanementRadius2, minRadius); 
+				} else {
+					return 0;
+				}
+			}); 	
+	}
+
+    var width = 1500,
+		height = 1000;
+	var showVisType = [];
+    // functions to translate lat/lon to the svg coordinate space 
+    var projection = d3.geo.albersUsa()  
+        .translate([width / 2, height / 2])
+        .scale(1500);
+    var path = d3.geo.path()
+        .projection(projection);
+
+    // insert a master svg element into our div
+    var svg = d3.select("#airportcanvas").append("svg")
+        .attr("width", width)
+        .attr("height", height);
+
+    // create a d3-tip object for better mouseover effects
+    var tip = d3.tip()
+      .attr('class', 'd3-tip')  
+      .offset([-10, 0])
+      .html(function(d) {
+		if (perMark){
+			showVisType= "Occurrence";
+			if(d.allCanl){showString = "All Cancelled"}else{showString = (d.delayRadius/60).toLocaleString()}
+		}else{
+			showVisType= "Strength_Median";
+			if(d.allCanl){showString = "All Cancelled"}else{showString = (d.delayRadius*90/60).toLocaleString() + "mins"}
+		}
+        return "<span style='color:#268bd2'>" + 
+            d.apt + "</span>" + " - " + "<span style='color:#ccc'>" + 
+            d.name.charAt(0) + capWords(d.name.slice(1).toLowerCase()) + 
+            "</span><br>" +
+            "<span style='color:#268bd2'>2013 Enplanements: </span>" +
+            d.enplanements.toLocaleString()+"</span><br>"+
+			"<span style='color:#268bd2'>"+showVisType+": </span>" +
+            showString;
+      });
+    svg.call(tip);
+
+
+    // asynchronous load of multiple datasets
+    queue()
+        .defer(d3.json, "data/us.json")
+        .await(makePlot);  // makePlot will wait until both loaded
+
+    function makePlot(error, us) {
+	
+        // d3 csv's are untyped:  need to coerce elements into numerics
+        airports.forEach(function(d) {
+            var aptPos = [+d.lon, +d.lat];
+            var position = projection(aptPos);
+            if (position == null) {
+                d.x = -10;  // essentially saying don't plot these
+                d.y = -10;
+            } else {
+                d.x = position[0];
+                d.y = position[1];
+            }
+            
+            d.enplanements = +d.enplanements;
+        });
+
+        // topojson
+        svg.append("path")
+          .datum(topojson.feature(us, us.objects.land))
+          .attr("class", "land")
+          .attr("d", path);
+        svg.append("path")
+          .datum(topojson.mesh(us, us.objects.states, 
+                function(a, b) { return a !== b; }))
+          .attr("class", "states")
+          .attr("d", path);
+
+        // use d3 to insert airports
+        var airport = svg.append("g")
+          .attr("class", "airportGroup")
+        .selectAll("g")
+          .data(airports)
+        .enter().append("g")
+          .attr("class", "airport1")
+        .append("rect")
+          .attr("transform", function(d) {return "translate(" + d.x + "," + d.y + ")";})
+          .attr("fill", "#268bd2") 
+          .style("opacity", 0.2)
+          .on('mouseover', tip.show) 
+          .on('mouseout', tip.hide);
+
+var airport = svg.append("g")
+          .attr("class", "airportGroup")
+        .selectAll("g")
+          .data(airports)
+        .enter().append("g")
+          .attr("class", "airport2")
+        .append("rect")
+          .attr("transform", function(d) {return "translate(" + d.x + "," + d.y + ")";})
+          .attr("fill", "red") 
+          .style("opacity", 0.6)
+          .on('mouseover', tip.show) 
+          .on('mouseout', tip.hide);
+        // use d3 to set circle radius based on page variables
+        updateEnplanementFilter(enplanementFilterVal); // this calls updateAirportRadius
+
+    }
+    
+
+	
+</script>
+
+</body>

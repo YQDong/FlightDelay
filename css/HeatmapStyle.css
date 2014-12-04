@@ -1,0 +1,137 @@
+body {
+  font: 15px sans-serif;
+  shape-rendering: crispEdges;
+}
+
+.day {
+  fill: #fff;
+  stroke: #ccc;
+}
+
+.month {
+  fill: none;
+  stroke: #000;
+  stroke-width: 2px;
+}
+
+Line 157, Column 10
+
+
+Pause On Caught Exceptions
+
+Watch Expressions
+Call StackAsync
+Not Paused
+Scope Variables
+Not Paused
+Breakpoints
+No Breakpoints
+DOM Breakpoints
+XHR Breakpoints
+Event Listener Breakpoints
+ConsoleSearchEmulationRendering
+
+
+
+Preserve log
+
+.RdYlGn .q0-100{fill:#ffff6e}
+.RdYlGn .q1-100{fill:#ffff68}
+.RdYlGn .q2-100{fill:#ffff62}
+.RdYlGn .q3-100{fill:#ffff5d}
+.RdYlGn .q4-100{fill:#ffff58}
+.RdYlGn .q5-100{fill:#ffff53}
+.RdYlGn .q6-100{fill:#ffff4e}
+.RdYlGn .q7-100{fill:#ffff4a}
+.RdYlGn .q8-100{fill:#ffff46}
+.RdYlGn .q9-100{fill:#ffff42}
+.RdYlGn .q10-100{fill:#ffff3e}
+.RdYlGn .q11-100{fill:#ffff3a}
+.RdYlGn .q12-100{fill:#ffff37}
+.RdYlGn .q13-100{fill:#ffff34}
+.RdYlGn .q14-100{fill:#ffff31}
+.RdYlGn .q15-100{fill:#ffff2e}
+.RdYlGn .q16-100{fill:#ffff2b}
+.RdYlGn .q17-100{fill:#ffff28}
+.RdYlGn .q18-100{fill:#ffff26}
+.RdYlGn .q19-100{fill:#ffff24}
+.RdYlGn .q20-100{fill:#ffff22}
+.RdYlGn .q21-100{fill:#fff520}
+.RdYlGn .q22-100{fill:#ffe91e}
+.RdYlGn .q23-100{fill:#ffdd1c}
+.RdYlGn .q24-100{fill:#ffd21a}
+.RdYlGn .q25-100{fill:#ffc718}
+.RdYlGn .q26-100{fill:#ffbd16}
+.RdYlGn .q27-100{fill:#ffb314}
+.RdYlGn .q28-100{fill:#ffaa13}
+.RdYlGn .q29-100{fill:#ffa112}
+.RdYlGn .q30-100{fill:#ff9911}
+.RdYlGn .q31-100{fill:#ff9110}
+.RdYlGn .q32-100{fill:#ff890f}
+.RdYlGn .q33-100{fill:#ff820e}
+.RdYlGn .q34-100{fill:#ff7b0d}
+.RdYlGn .q35-100{fill:#ff750c}
+.RdYlGn .q36-100{fill:#ff6f0b}
+.RdYlGn .q37-100{fill:#ff690a}
+.RdYlGn .q38-100{fill:#ff6309}
+.RdYlGn .q39-100{fill:#ff5e08}
+.RdYlGn .q40-100{fill:#ff5907}
+.RdYlGn .q41-100{fill:#f45406}
+.RdYlGn .q42-100{fill:#e84f05}
+.RdYlGn .q43-100{fill:#dc4b04}
+.RdYlGn .q44-100{fill:#d14703}
+.RdYlGn .q45-100{fill:#c64302}
+.RdYlGn .q46-100{fill:#bc3f01}
+.RdYlGn .q47-100{fill:#b23b00}
+.RdYlGn .q48-100{fill:#a93800}
+.RdYlGn .q49-100{fill:#a03500}
+.RdYlGn .q50-100{fill:#983200}
+.RdYlGn .q51-100{fill:#902f00}
+.RdYlGn .q52-100{fill:#882c00}
+.RdYlGn .q53-100{fill:#812900}
+.RdYlGn .q54-100{fill:#7a2700}
+.RdYlGn .q55-100{fill:#742500}
+.RdYlGn .q56-100{fill:#6e2300}
+.RdYlGn .q57-100{fill:#682100}
+.RdYlGn .q58-100{fill:#621f00}
+.RdYlGn .q59-100{fill:#5d1d00}
+.RdYlGn .q60-100{fill:#581b00}
+.RdYlGn .q61-100{fill:#531900}
+.RdYlGn .q62-100{fill:#4e1700}
+.RdYlGn .q63-100{fill:#4a1500}
+.RdYlGn .q64-100{fill:#461300}
+.RdYlGn .q65-100{fill:#421200}
+.RdYlGn .q66-100{fill:#3e1100}
+.RdYlGn .q67-100{fill:#3a1000}
+.RdYlGn .q68-100{fill:#370f00}
+.RdYlGn .q69-100{fill:#340e00}
+.RdYlGn .q70-100{fill:#310d00}
+.RdYlGn .q71-100{fill:#2e0c00}
+.RdYlGn .q72-100{fill:#2b0b00}
+.RdYlGn .q73-100{fill:#280a00}
+.RdYlGn .q74-100{fill:#260900}
+.RdYlGn .q75-100{fill:#240800}
+.RdYlGn .q76-100{fill:#220700}
+.RdYlGn .q77-100{fill:#200600}
+.RdYlGn .q78-100{fill:#1e0500}
+.RdYlGn .q79-100{fill:#1c0400}
+.RdYlGn .q80-100{fill:#1a0300}
+.RdYlGn .q81-100{fill:#180200}
+.RdYlGn .q82-100{fill:#160100}
+.RdYlGn .q83-100{fill:#140000}
+.RdYlGn .q84-100{fill:#130000}
+.RdYlGn .q85-100{fill:#120000}
+.RdYlGn .q86-100{fill:#110000}
+.RdYlGn .q87-100{fill:#100000}
+.RdYlGn .q88-100{fill:#0f0000}
+.RdYlGn .q89-100{fill:#0e0000}
+.RdYlGn .q90-100{fill:#0d0000}
+.RdYlGn .q91-100{fill:#0c0000}
+.RdYlGn .q92-100{fill:#0b0000}
+.RdYlGn .q93-100{fill:#0a0000}
+.RdYlGn .q94-100{fill:#090000}
+.RdYlGn .q95-100{fill:#080000}
+.RdYlGn .q96-100{fill:#070000}
+.RdYlGn .q97-100{fill:#060000}
+.RdYlGn .q98-100{fill:#050000}
+.RdYlGn .q99-100{fill:#0d0400}
